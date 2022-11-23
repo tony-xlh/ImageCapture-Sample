@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Document Scanner</title>
+  <script src="https://cdn.jsdelivr.net/npm/dynamsoft-document-normalizer@1.0.10/dist/ddn.js"></script>
   <style>
     
   </style>
@@ -17,6 +18,10 @@
     <div class="extraControls" style="display:none;">
       <button id="takePhotoBtn">Take Photo</button>
       <button id="processBtn">Detect and normalize</button>
+      <br/>
+      <img id="photoTaken" />
+      <br/>
+      <img id="normalized" />
     </div>
     
   </div>
@@ -30,6 +35,7 @@
   video.addEventListener('ended', (event) => {
     onVideoStopped();
   });
+  
   document.getElementById("startCameraBtn").addEventListener('click', (event) => {
     console.log("start camera");
     let options = {};
@@ -39,14 +45,41 @@
     play(options);
   });
   
+  document.getElementById("takePhotoBtn").addEventListener('click', (event) => {
+    let dataURL = captureFrame();
+    document.getElementById("photoTaken").src = dataURL;
+  });
+  
+  document.getElementById("processBtn").addEventListener('click', async (event) => {
+    let dataURL = document.getElementById("photoTaken").src;
+    if (dataURL) {
+      const quads = await ddn.detectQuad(dataURL);
+      if (quads.length>0) {
+        let quad = quads[0].location;
+        let retImageDat = null;
+        retImageData = await ddn.normalize(dataURL, {quad: quad});
+        console.log(retImageData);
+        document.getElementById("normalized").src = retImageData.image.toCanvas().toDataURL();
+      }
+    }
+  });
+  
+  
+  
+  let ddn;
   let localStream;
   let cameraDevices = [];
   window.onload = async function() {
+    initDDN();
     await requestCameraPermission();
     await loadCameraDevices();
     loadCameraDevicesToSelect();
   }
   
+  async function initDDN(){
+    Dynamsoft.DDN.DocumentNormalizer.license = "DLS2eyJoYW5kc2hha2VDb2RlIjoiMjM0ODEwLTE2NTMzNTY5NzQ0ODMiLCJvcmdhbml6YXRpb25JRCI6IjIzNDgxMCJ9";
+    ddn = await Dynamsoft.DDN.DocumentNormalizer.createInstance();
+  }
   
   async function loadCameraDevices(){
     const constraints = {video: true, audio: false};
@@ -122,6 +155,18 @@
   function onVideoStopped(){
     extraControls.style.display = "none";
   }
+  
+  function captureFrame(){
+    let w = video.videoWidth;
+    let h = video.videoHeight;
+    let canvas = document.createElement('canvas');
+    canvas.width  = w;
+    canvas.height = h;
+    let ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, w, h);
+    
+    return canvas.toDataURL();
+  } 
   </script>
 </body>
 </html>
