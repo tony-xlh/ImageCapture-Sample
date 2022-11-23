@@ -45,8 +45,14 @@
     play(options);
   });
   
-  document.getElementById("takePhotoBtn").addEventListener('click', (event) => {
-    let dataURL = captureFrame();
+  document.getElementById("takePhotoBtn").addEventListener('click', async (event) => {
+    let dataURL
+    if (imageCapture) {
+      dataURL = await takePhoto();
+    }else{
+      dataURL = captureFrame();
+    }
+    
     document.getElementById("photoTaken").src = dataURL;
   });
   
@@ -67,6 +73,7 @@
   
   
   let ddn;
+  let imageCapture;
   let localStream;
   let cameraDevices = [];
   window.onload = async function() {
@@ -132,6 +139,10 @@
       localStream = stream;
       // Attach local stream to video element      
       video.srcObject = stream;
+      if ("ImageCapture" in window) {
+        const track = localStream.getVideoTracks()[0];
+        imageCapture = new ImageCapture(track);
+      }
     }).catch(function(err) {
       console.error('getUserMediaError', err, err.stack);
     });
@@ -166,7 +177,19 @@
     ctx.drawImage(video, 0, 0, w, h);
     
     return canvas.toDataURL();
-  } 
+  }
+  
+  async function takePhoto(){
+    let blob = await imageCapture.takePhoto();
+    console.log(blob);
+    let bitmap = await createImageBitmap(blob);
+    let canvas = document.createElement('canvas');
+    canvas.width  = bitmap.width;
+    canvas.height = bitmap.height;
+    let ctx = canvas.getContext('2d');
+    ctx.drawImage(bitmap, 0, 0, bitmap.width, bitmap.height);
+    return canvas.toDataURL();
+  }
   </script>
 </body>
 </html>
