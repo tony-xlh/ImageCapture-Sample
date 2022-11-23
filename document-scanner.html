@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document Scanner</title>
+  <style>
+    
+  </style>
+</head>
+<body>
+  <div class="home">
+    <video class="camera" muted autoplay="autoplay" playsinline="playsinline" webkit-playsinline></video>
+    <br/>
+    <select id="cameraSelect"></select>
+    <button id="startCameraBtn">Start Camera</button>
+    <div class="extraControls" style="display:none;">
+      <button id="takePhotoBtn">Take Photo</button>
+      <button id="processBtn">Detect and normalize</button>
+    </div>
+    
+  </div>
+  <script>
+  const cameraSelect = document.getElementById("cameraSelect");
+  const extraControls = document.getElementsByClassName("extraControls")[0];
+  const video = document.querySelector('video');
+  video.addEventListener('loadeddata', (event) => {
+    extraControls.style.display = "";
+  });
+  video.addEventListener('ended', (event) => {
+    onVideoStopped();
+  });
+  document.getElementById("startCameraBtn").addEventListener('click', (event) => {
+    console.log("start camera");
+    let options = {};
+    if (cameraSelect.selectedIndex != -1) {
+      options.deviceId = cameraSelect.selectedOptions[0].value;
+    }
+    play(options);
+  });
+  
+  let localStream;
+  let cameraDevices = [];
+  window.onload = async function() {
+    await requestCameraPermission();
+    await loadCameraDevices();
+    loadCameraDevicesToSelect();
+  }
+  
+  
+  async function loadCameraDevices(){
+    const constraints = {video: true, audio: false};
+    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    for (let i=0;i<devices.length;i++){
+      let device = devices[i];
+      if (device.kind == 'videoinput'){ // filter out audio devices
+        cameraDevices.push(device);
+      }
+    }
+  }
+  
+  function loadCameraDevicesToSelect(){
+    for (let i=0;i<cameraDevices.length;i++){
+      let device = cameraDevices[i];
+      cameraSelect.appendChild(new Option(device.label,device.deviceId))
+    }
+  }
+  
+  
+  async function requestCameraPermission() {
+    const constraints = {video: true, audio: false};
+    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+    const tracks = stream.getTracks();
+    for (let i=0;i<tracks.length;i++) {
+      const track = tracks[i];
+      track.stop();  // stop the opened camera
+    }
+  }
+  
+  function play(options) {
+    stop(); // close before play
+    let constraints = {};
+  
+    if (options.deviceId){
+      constraints = {
+        video: {deviceId: options.deviceId},
+        audio: false
+      }
+    }else{
+      constraints = {
+        video: true,
+        audio: false
+      }
+    }
+
+
+    navigator.mediaDevices.getUserMedia(constraints).then(function(stream) {
+      localStream = stream;
+      // Attach local stream to video element      
+      video.srcObject = stream;
+    }).catch(function(err) {
+      console.error('getUserMediaError', err, err.stack);
+    });
+  }
+  
+  function stop() {
+    try{
+      if (localStream){
+        const tracks = localStream.getTracks();
+        for (let i=0;i<tracks.length;i++) {
+          const track = tracks[i];
+          track.stop();
+        }
+      }
+      onVideoStopped();
+    } catch (e){
+      alert(e.message);
+    }
+  };
+
+  function onVideoStopped(){
+    extraControls.style.display = "none";
+  }
+  </script>
+</body>
+</html>
