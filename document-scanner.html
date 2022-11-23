@@ -16,6 +16,8 @@
     <select id="cameraSelect"></select>
     <button id="startCameraBtn">Start Camera</button>
     <div class="extraControls" style="display:none;">
+      <input type="checkbox" id="useCanvas" name="useCanvas" checked>
+      <label for="useCanvas">Process Canvas instead of DataURL</label>
       <button id="takePhotoBtn">Take Photo</button>
       <button id="processBtn">Detect and normalize</button>
       <br/>
@@ -57,13 +59,20 @@
   });
   
   document.getElementById("processBtn").addEventListener('click', async (event) => {
-    let dataURL = document.getElementById("photoTaken").src;
-    if (dataURL) {
-      const quads = await ddn.detectQuad(dataURL);
+    let source;
+    if (dataCanvas) {
+      source = dataCanvas;
+    }else{
+      source = document.getElementById("photoTaken").src;
+    }
+    console.log("source:");
+    console.log(source);
+    if (source) {
+      const quads = await ddn.detectQuad(source);
       if (quads.length>0) {
         let quad = quads[0].location;
         let retImageDat = null;
-        retImageData = await ddn.normalize(dataURL, {quad: quad});
+        retImageData = await ddn.normalize(source, {quad: quad});
         console.log(retImageData);
         document.getElementById("normalized").src = retImageData.image.toCanvas().toDataURL();
       }
@@ -76,6 +85,7 @@
   let imageCapture;
   let localStream;
   let cameraDevices = [];
+  let dataCanvas;
   window.onload = async function() {
     initDDN();
     await requestCameraPermission();
@@ -175,6 +185,11 @@
     canvas.height = h;
     let ctx = canvas.getContext('2d');
     ctx.drawImage(video, 0, 0, w, h);
+    if (document.getElementById("useCanvas").checked) {
+      dataCanvas = canvas;
+    }else{
+      dataCanvas = null;
+    }
     
     return canvas.toDataURL();
   }
@@ -188,6 +203,11 @@
     canvas.height = bitmap.height;
     let ctx = canvas.getContext('2d');
     ctx.drawImage(bitmap, 0, 0, bitmap.width, bitmap.height);
+    if (document.getElementById("useCanvas").checked) {
+      dataCanvas = canvas;
+    }else{
+      dataCanvas = null;
+    }
     return canvas.toDataURL();
   }
   </script>
