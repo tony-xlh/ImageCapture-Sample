@@ -16,8 +16,6 @@
     <select id="cameraSelect"></select>
     <button id="startCameraBtn">Start Camera</button>
     <div class="extraControls" style="display:none;">
-      <input type="checkbox" id="useCanvas" name="useCanvas" checked>
-      <label for="useCanvas">Process Canvas instead of DataURL</label>
       <button id="takePhotoBtn">Take Photo</button>
       <button id="processBtn">Detect and normalize</button>
       <br/>
@@ -48,25 +46,20 @@
   });
   
   document.getElementById("takePhotoBtn").addEventListener('click', async (event) => {
-    let dataURL
+    let objectURL;
     if (imageCapture) {
-      dataURL = await takePhoto();
+      let blob = await imageCapture.takePhoto();
+      objectURL = URL.createObjectURL(blob);
     }else{
-      dataURL = captureFrame();
+      objectURL = URL.createObjectURL(video);
     }
     
-    document.getElementById("photoTaken").src = dataURL;
+    document.getElementById("photoTaken").src = objectURL;
   });
   
   document.getElementById("processBtn").addEventListener('click', async (event) => {
     let source;
-    if (dataCanvas) {
-      source = dataCanvas;
-    }else{
-      console.log("convert dataURL to canvas");
-      source = document.getElementById("photoTaken").src;
-      source = await getCanvasFromDataURL(source);
-    }
+    source = document.getElementById("photoTaken");
     console.log("source:");
     console.log(source);
     if (source) {
@@ -87,7 +80,6 @@
   let imageCapture;
   let localStream;
   let cameraDevices = [];
-  let dataCanvas;
   window.onload = async function() {
     initDDN();
     await requestCameraPermission();
@@ -98,6 +90,7 @@
   async function initDDN(){
     Dynamsoft.DDN.DocumentNormalizer.license = "DLS2eyJoYW5kc2hha2VDb2RlIjoiMjM0ODEwLTE2NTMzNTY5NzQ0ODMiLCJvcmdhbml6YXRpb25JRCI6IjIzNDgxMCJ9";
     ddn = await Dynamsoft.DDN.DocumentNormalizer.createInstance();
+    ddn.maxCvsSideLength = 9999;
   }
   
   async function loadCameraDevices(){
@@ -182,51 +175,6 @@
 
   function onVideoStopped(){
     extraControls.style.display = "none";
-  }
-  
-  function captureFrame(){
-    let w = video.videoWidth;
-    let h = video.videoHeight;
-    let canvas = document.createElement('canvas');
-    canvas.width  = w;
-    canvas.height = h;
-    let ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, w, h);
-    if (document.getElementById("useCanvas").checked) {
-      dataCanvas = canvas;
-    }else{
-      dataCanvas = null;
-    }
-    
-    return canvas.toDataURL();
-  }
-  
-  async function takePhoto(){
-    let blob = await imageCapture.takePhoto();
-    console.log(blob);
-    let bitmap = await createImageBitmap(blob);
-    let canvas = document.createElement('canvas');
-    canvas.width  = bitmap.width;
-    canvas.height = bitmap.height;
-    let ctx = canvas.getContext('2d');
-    ctx.drawImage(bitmap, 0, 0, bitmap.width, bitmap.height);
-    if (document.getElementById("useCanvas").checked) {
-      dataCanvas = canvas;
-    }else{
-      dataCanvas = null;
-    }
-    return canvas.toDataURL();
-  }
-  
-  async function getCanvasFromDataURL(dataURL){
-    let blob = await (await fetch(dataURL)).blob();
-    let bitmap = await createImageBitmap(blob);
-    let canvas = document.createElement('canvas');
-    canvas.width  = bitmap.width;
-    canvas.height = bitmap.height;
-    let ctx = canvas.getContext('2d');
-    ctx.drawImage(bitmap, 0, 0, bitmap.width, bitmap.height);
-    return canvas;
   }
   </script>
 </body>
